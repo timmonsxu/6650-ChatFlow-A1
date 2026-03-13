@@ -1,0 +1,13 @@
+pipeline:
+  name: smallest-pipeline
+  description: Minimal test pipeline
+
+stages:
+  - test
+
+hello:
+  stage: test
+  image: alpine:3.19
+  script:
+    - echo "Hello from CI/CD!"
+    - echo "Pipeline is working"

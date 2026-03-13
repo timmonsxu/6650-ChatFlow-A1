@@ -1,0 +1,26 @@
+pipeline:
+  name: allow-failure-critical-fails
+  description: >
+    lint has allow_failure: true and fails (ignored).
+    compile has allow_failure: false (default) and also fails.
+    Pipeline should FAIL because compile is a critical job.
+
+stages:
+  - build
+
+lint:
+  stage: build
+  image: alpine:3.19
+  allow_failure: true
+  script:
+    - echo "Lint failed (allowed)..."
+    - exit 1
+
+compile:
+  stage: build
+  image: alpine:3.19
+  needs: [lint]
+  allow_failure: false
+  script:
+    - echo "Compile failed (not allowed)..."
+    - exit 1

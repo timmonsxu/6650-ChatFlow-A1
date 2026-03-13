@@ -1,0 +1,22 @@
+pipeline:
+  name: allow-failure-all-pass
+  description: >
+    All jobs pass including the one with allow_failure: true.
+    Pipeline should succeed normally.
+
+stages:
+  - build
+
+lint:
+  stage: build
+  image: alpine:3.19
+  allow_failure: true
+  script:
+    - echo "Lint passed"
+
+compile:
+  stage: build
+  image: alpine:3.19
+  needs: [lint]
+  script:
+    - echo "Compile passed"

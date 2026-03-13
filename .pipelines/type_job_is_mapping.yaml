@@ -1,0 +1,7 @@
+pipeline:
+  name: default
+
+stages:
+  - build
+
+compile: echo hello

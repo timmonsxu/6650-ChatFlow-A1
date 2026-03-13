@@ -1,0 +1,11 @@
+pipeline:
+  name: bad pipeline
+
+stages:
+  - build
+
+compile:
+  stage: build
+  image: alpine:3.20
+  # Missing string quote, syntax error
+  script: 'echo hello

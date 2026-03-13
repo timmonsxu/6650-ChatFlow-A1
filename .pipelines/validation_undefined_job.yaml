@@ -1,0 +1,27 @@
+pipeline:
+  name: validation_undefined_job
+  description: Pipeline with errors for testing
+
+stages:
+  - build
+  - test
+
+# This job has a cycle: compile -> test -> compile
+compile:
+  stage: build
+  image: maven:3.9
+  needs: [test]  # ← Creates a cycle!
+  script: mvn compile
+
+test:
+  stage: test
+  image: maven:3.9
+  needs: [compile]
+  script: mvn test
+
+# This job references a non-existent job
+deploy:
+  stage: deploy  # ← Stage 'deploy' not defined!
+  image: alpine
+  needs: [nonexistent]  # ← Job doesn't exist!
+  script: echo "deploy"

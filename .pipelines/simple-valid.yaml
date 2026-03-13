@@ -1,0 +1,21 @@
+pipeline:
+  name: simple-pipeline
+  description: A simple valid pipeline for testing
+
+stages:
+  - build
+
+compile:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - echo "Compiling..."
+    - mvn compile
+
+package:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  needs: [compile]
+  script:
+    - echo "Packaging..."
+    - mvn package

@@ -1,0 +1,159 @@
+pipeline:
+  name: complex-ci-cd-pipeline
+  description: CI/CD pipeline for cicd-server and cicd-cli modules
+
+stages:
+  - build
+  - test
+  - deploy
+
+# ==================== BUILD STAGE ====================
+
+fetch-dependencies:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - echo "Fetching dependencies..."
+    - mvn -B dependency:resolve
+
+compile-server:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  needs: [fetch-dependencies]
+  script:
+    - echo "Compiling cicd-server..."
+    - mvn -B compile -pl cicd-server -am
+
+compile-cli:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  needs: [compile-server]
+  script:
+    - echo "Compiling cicd-cli..."
+    - mvn -B compile -pl cicd-cli -am
+
+package-server:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  needs: [compile-server]
+  script:
+    - echo "Packaging cicd-server..."
+    - mvn -B package -pl cicd-server -DskipTests
+
+package-cli:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  needs: [compile-cli]
+  script:
+    - echo "Packaging cicd-cli..."
+    - mvn -B package -pl cicd-cli -DskipTests
+
+package-all:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  needs: [package-server, package-cli]
+  script:
+    - echo "Packaging entire project..."
+    - mvn -B package -DskipTests
+
+
+# ==================== TEST STAGE ====================
+
+unit-test-server:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  needs: [compile-server]
+  script:
+    - echo "Running cicd-server unit tests..."
+    - mvn -B test -pl cicd-server
+
+unit-test-cli:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  needs: [compile-cli]
+  script:
+    - echo "Running cicd-cli unit tests..."
+    - mvn -B test -pl cicd-cli
+
+integration-test:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  needs: [unit-test-server, unit-test-cli]
+  script:
+    - echo "Running integration tests..."
+    - mvn -B verify
+
+code-coverage-report:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  needs: [integration-test]
+  script:
+    - echo "Generating JaCoCo coverage report..."
+    - mvn -B jacoco:report-aggregate
+
+security-scan:
+  stage: test
+  image: aquasec/trivy:latest
+  needs: [code-coverage-report]
+  script:
+    - echo "Running filesystem security scan..."
+    - trivy filesystem --severity HIGH,CRITICAL .
+
+
+# ==================== DEPLOY STAGE ====================
+
+build-server-image:
+  stage: deploy
+  image: docker:24-cli
+  needs: [package-server]
+  script:
+    - echo "Building cicd-server Docker image..."
+    - docker build -t cicd-server:${CI_COMMIT_SHA} cicd-server/
+
+build-cli-image:
+  stage: deploy
+  image: docker:24-cli
+  needs: [package-cli]
+  script:
+    - echo "Building cicd-cli Docker image..."
+    - docker build -t cicd-cli:${CI_COMMIT_SHA} cicd-cli/
+
+push-images:
+  stage: deploy
+  image: docker:24-cli
+  needs: [build-server-image, build-cli-image]
+  script:
+    - echo "Pushing images..."
+    - docker push cicd-server:${CI_COMMIT_SHA}
+    - docker push cicd-cli:${CI_COMMIT_SHA}
+
+deploy-to-staging:
+  stage: deploy
+  image: alpine:latest
+  needs: [push-images]
+  script:
+    - echo "Deploying cicd-server to staging..."
+    - kubectl set image deployment/cicd-server cicd-server=cicd-server:${CI_COMMIT_SHA}
+
+staging-smoke-test:
+  stage: deploy
+  image: curlimages/curl:latest
+  needs: [deploy-to-staging]
+  script:
+    - echo "Running staging smoke test..."
+    - curl -f http://staging-cicd-server/health
+
+deploy-production:
+  stage: deploy
+  image: alpine:latest
+  needs: [staging-smoke-test]
+  script:
+    - echo "Deploying cicd-server to production..."
+    - kubectl set image deployment/cicd-server cicd-server=cicd-server:${CI_COMMIT_SHA}
+
+notify-success:
+  stage: deploy
+  image: alpine:latest
+  needs: [deploy-production]
+  script:
+    - echo "Deployment successful!"

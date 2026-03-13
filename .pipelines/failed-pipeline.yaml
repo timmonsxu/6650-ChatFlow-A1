@@ -1,0 +1,36 @@
+pipeline:
+  name: example-ci-cd
+  description: Example CI/CD pipeline for testing
+
+stages:
+  - build
+  - test
+  - deploy
+
+compile:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - mvn clean compile
+
+unit-test:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  needs: [compile]
+  script:
+    - mvn test
+
+integration-test:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  needs: [compile]
+  script:
+    - mvn verify
+
+deploy-staging:
+  stage: deploy
+  image: alpine:latest
+  needs: [unit-test, integration-test]
+  script:
+    - echo "Deploying to staging..."
+    - ./deploy.sh staging

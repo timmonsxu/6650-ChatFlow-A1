@@ -1,0 +1,21 @@
+pipeline:
+  name: validation_cycle
+  description: Demonstrates cycle detection in job dependencies
+
+stages:
+  - build
+
+# Simple 2-node cycle: jobA -> jobB -> jobA
+jobA:
+  stage: build
+  image: alpine:latest
+  needs: [jobB]
+  script:
+    - echo "Job A"
+
+jobB:
+  stage: build
+  image: alpine:latest
+  needs: [jobA]
+  script:
+    - echo "Job B"

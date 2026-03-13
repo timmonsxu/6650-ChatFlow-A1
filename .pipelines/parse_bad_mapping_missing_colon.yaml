@@ -1,0 +1,10 @@
+pipeline:
+  name: default
+
+stages:
+  - build
+
+compile:
+  stage build
+  image: alpine:3.20
+  script: echo hello

@@ -62,7 +62,6 @@ package-all:
 unit-test-server:
   stage: test
   image: maven:3.9-eclipse-temurin-21
-  needs: [compile-server]
   script:
     - echo "Running cicd-server unit tests..."
     - mvn -B test -pl cicd-server
@@ -70,7 +69,6 @@ unit-test-server:
 unit-test-cli:
   stage: test
   image: maven:3.9-eclipse-temurin-21
-  needs: [compile-cli]
   script:
     - echo "Running cicd-cli unit tests..."
     - mvn -B test -pl cicd-cli
@@ -105,7 +103,6 @@ security-scan:
 build-server-image:
   stage: deploy
   image: docker:24-cli
-  needs: [package-server]
   script:
     - echo "Building cicd-server Docker image..."
     - docker build -t cicd-server:${CI_COMMIT_SHA} cicd-server/
@@ -113,7 +110,6 @@ build-server-image:
 build-cli-image:
   stage: deploy
   image: docker:24-cli
-  needs: [package-cli]
   script:
     - echo "Building cicd-cli Docker image..."
     - docker build -t cicd-cli:${CI_COMMIT_SHA} cicd-cli/
